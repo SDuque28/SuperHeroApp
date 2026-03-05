@@ -1,14 +1,14 @@
 import { Stack } from "expo-router";
 
-export default function HomeLayout() {
+export default function DataLayout() {
     return (
         <Stack
             screenOptions={{
                 headerShown: false,
-                headerTitle: "Inicio"
+                headerTitle: "Data"
             }}
         >
-            <Stack.Screen name="index2" />
+            <Stack.Screen name="data" />
         </Stack>
     );
 }
