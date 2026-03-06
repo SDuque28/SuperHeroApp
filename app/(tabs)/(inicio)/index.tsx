@@ -1,3 +1,22 @@
+/**
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║              HEROVERSE — INICIO (HOME) TAB               ║
+ * ║          Comic Book Aesthetic · React Native             ║
+ * ║  Created by Santiago Duque Robledo & Cesar Arias Posada  ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * DROP-IN REPLACEMENT for your app/(tabs)/index.tsx
+ *
+ * Dependencies (run these if not already installed):
+ *   npx expo install expo-linear-gradient
+ *   npx expo install expo-font @expo-google-fonts/bangers @expo-google-fonts/oswald
+ *   npx expo install react-native-reanimated   ← already in most Expo projects
+ *
+ * Usage:
+ *   Replace the contents of app/(tabs)/index.tsx with this file.
+ *   The component is self-contained; all styles live at the bottom.
+ */
+
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -12,7 +31,6 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router'; // ← Para navegar entre tabs
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,14 +44,13 @@ import { useFonts, Bangers_400Regular } from '@expo-google-fonts/bangers';
 import { Oswald_400Regular, Oswald_700Bold } from '@expo-google-fonts/oswald';
 
 // ─── Superhero API ──────────────────────────────────────────────────────────
-const API_KEY = 'ddc92e6ed8ef5366368a9cff47b3dd8c';
+const API_KEY = 'ddc92e6ed8ef5366368a9cff47b3dd8c'; // Replace with your key from superheroapi.com
 const API_BASE = `https://superheroapi.com/api/${API_KEY}`;
 
-// ─── Tipos de datos ─────────────────────────────────────────────────────────
-/**
- * Tipo Hero: estructura de datos que devuelve la Superhero API
- * para cada héroe con sus estadísticas y biografía.
- */
+// Curated featured hero IDs (spectacular visual variety)
+const FEATURED_IDS = [70, 195, 332, 387, 583, 720]; // Batman, Captain America, Ironman, Thor, Spider-Man, Wonder Woman
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 interface Hero {
   id: string;
   name: string;
@@ -51,13 +68,9 @@ interface Hero {
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// ─── TEMA / COLORES GLOBALES ─────────────────────────────────────────────────
-/**
- * COMIC: objeto de constantes de diseño.
- * Centralizar colores y tamaños aquí es una BUENA PRÁCTICA
- * porque evita repetir magic numbers y facilita cambios globales.
- */
+// ─── THEME ───────────────────────────────────────────────────────────────────
 export const COMIC = {
+  // Core palette – mirrors the landing page exactly
   red: '#E8173D',
   yellow: '#FFD600',
   blue: '#0057FF',
@@ -66,30 +79,32 @@ export const COMIC = {
   paper2: '#FFF3D6',
   darkBg: '#0A0A2E',
   darkBg2: '#1A0040',
+
+  // Typography sizes
   heroTitle: 52,
   sectionTitle: 32,
   cardTitle: 18,
   body: 14,
   label: 11,
+
+  // Comic border radius (mostly sharp)
   radius: 4,
   radiusCard: 8,
+
+  // Ink borders
   borderWidth: 3,
   borderWidthThick: 5,
 };
 
-// ─── COMPONENTE: HalftoneOverlay ────────────────────────────────────────────
-/**
- * Simula el patrón de puntos Ben-Day característico de los cómics.
- * Es un overlay puramente decorativo (pointerEvents="none" para no
- * bloquear toques).
- */
+// ─── HALFTONE DOT PATTERN (pure RN, no SVG dep) ──────────────────────────────
+// We simulate Ben-Day dots with a repeating grid of tiny View dots.
 const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: number }> = ({
   color = 'transparent',
   dotColor = 'rgba(0,0,0,0.06)',
   size = 8,
 }) => {
   const cols = Math.ceil(SCREEN_W / size) + 2;
-  const rows = 14;
+  const rows = 14; // enough for most containers
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {Array.from({ length: rows }).map((_, r) => (
@@ -97,7 +112,12 @@ const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: numb
           {Array.from({ length: cols }).map((_, c) => (
             <View
               key={c}
-              style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                width: size,
+                height: size,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
               <View
                 style={{
@@ -115,11 +135,7 @@ const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: numb
   );
 };
 
-// ─── COMPONENTE: BurstLabel (POW!, ZAP!) ────────────────────────────────────
-/**
- * Etiqueta estilo onomatopeya de cómic.
- * Acepta texto, color de fondo, color de texto y rotación.
- */
+// ─── COMIC BURST LABEL (POW!, ZAP! style) ────────────────────────────────────
 const BurstLabel: React.FC<{
   text: string;
   bg?: string;
@@ -146,19 +162,19 @@ const BurstLabel: React.FC<{
     ]}
   >
     <Text
-      style={{ fontFamily: 'Bangers_400Regular', fontSize: 14, letterSpacing: 2, color }}
+      style={{
+        fontFamily: 'Bangers_400Regular',
+        fontSize: 14,
+        letterSpacing: 2,
+        color,
+      }}
     >
       {text}
     </Text>
   </View>
 );
 
-// ─── COMPONENTE: ComicButton ────────────────────────────────────────────────
-/**
- * Botón con estética de cómic: sombra offset, borde ink, animación al presionar.
- * Usa useSharedValue + useAnimatedStyle de Reanimated para la animación
- * de "hundimiento" cuando se toca → buena práctica de UX en mobile.
- */
+// ─── COMIC BUTTON ────────────────────────────────────────────────────────────
 const ComicButton: React.FC<{
   label: string;
   emoji?: string;
@@ -181,21 +197,15 @@ const ComicButton: React.FC<{
   const offsetY = useSharedValue(0);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateX: offsetX.value },
-      { translateY: offsetY.value },
-    ],
+    transform: [{ scale: scale.value }, { translateX: offsetX.value }, { translateY: offsetY.value }],
   }));
 
-  // Al presionar: escala abajo + mueve 3px (simula que se hunde la sombra)
   const handlePressIn = () => {
     scale.value = withSpring(0.94, { damping: 10 });
     offsetX.value = withTiming(3, { duration: 80 });
     offsetY.value = withTiming(3, { duration: 80 });
   };
 
-  // Al soltar: regresa a posición original
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 8 });
     offsetX.value = withTiming(0, { duration: 120 });
@@ -209,19 +219,20 @@ const ComicButton: React.FC<{
       onPressOut={handlePressOut}
       activeOpacity={1}
     >
-      {/* Capa de sombra ink (siempre fija, no se anima) */}
+      {/* Hard ink shadow offset layer */}
       <View
-        style={{
-          backgroundColor: shadowColor,
-          borderRadius: COMIC.radius,
-          position: 'absolute',
-          top: 5,
-          left: 5,
-          right: -5,
-          bottom: -5,
-        }}
+        style={[
+          {
+            backgroundColor: shadowColor,
+            borderRadius: COMIC.radius,
+            position: 'absolute',
+            top: 5,
+            left: 5,
+            right: -5,
+            bottom: -5,
+          },
+        ]}
       />
-      {/* Capa principal que sí se anima */}
       <Animated.View
         style={[
           {
@@ -255,67 +266,77 @@ const ComicButton: React.FC<{
   );
 };
 
-// ─── COMPONENTE: ActionPanel ─────────────────────────────────────────────────
-/**
- * Panel de acción rápida. Cada panel es un acceso directo a una sección.
- * Se usa flex:1 para que dos paneles ocupen el mismo ancho en una fila.
- */
-const ActionPanel: React.FC<{
-  emoji: string;
-  title: string;
-  subtitle: string;
-  bg: string;
-  onPress: () => void;
-  burst?: string;
-}> = ({ emoji, title, subtitle, bg, onPress, burst }) => {
+// ─── HERO CARD (featured) ────────────────────────────────────────────────────
+const HeroCard: React.FC<{ hero: Hero; onPress: () => void; accent: string }> = ({
+  hero,
+  onPress,
+  accent,
+}) => {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const stats = hero.powerstats;
+  const topStat = Object.entries(stats)
+    .filter(([, v]) => v !== 'null')
+    .sort(([, a], [, b]) => Number(b) - Number(a))[0];
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.95); }}
+      onPressIn={() => { scale.value = withSpring(0.96); }}
       onPressOut={() => { scale.value = withSpring(1); }}
       activeOpacity={1}
-      style={{ flex: 1 }}
     >
-      <View style={[styles.actionPanelShadow, { backgroundColor: COMIC.ink }]} />
-      <Animated.View style={[styles.actionPanel, { backgroundColor: bg }, animStyle]}>
-        <HalftoneOverlay dotColor="rgba(255,255,255,0.08)" size={10} />
-        <Text style={styles.actionEmoji}>{emoji}</Text>
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSubtitle}>{subtitle}</Text>
-        {burst && (
-          <BurstLabel
-            text={burst}
-            bg={COMIC.yellow}
-            color={COMIC.ink}
-            rotate={10}
-            style={styles.actionBurst}
+      <Animated.View style={[styles.heroCard, { borderColor: COMIC.ink }, animStyle]}>
+        {/* Accent top stripe */}
+        <View style={[styles.heroCardStripe, { backgroundColor: accent }]} />
+
+        {/* Hard shadow */}
+        <View style={[styles.heroCardShadow, { backgroundColor: accent }]} />
+
+        {/* Hero image */}
+        <View style={styles.heroCardImageWrap}>
+          <Image
+            source={{ uri: hero.image.url }}
+            style={styles.heroCardImage}
+            resizeMode="cover"
           />
-        )}
+          <LinearGradient
+            colors={['transparent', 'rgba(10,10,46,0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
+        {/* Info */}
+        <View style={styles.heroCardInfo}>
+          <Text style={styles.heroCardName} numberOfLines={1}>
+            {hero.name.toUpperCase()}
+          </Text>
+          <Text style={styles.heroCardPublisher} numberOfLines={1}>
+            {hero.biography.publisher || 'Unknown Publisher'}
+          </Text>
+          {topStat && (
+            <View style={styles.heroCardStatPill}>
+              <Text style={styles.heroCardStatText}>
+                {topStat[0].toUpperCase()}: {topStat[1]}
+              </Text>
+            </View>
+          )}
+        </View>
       </Animated.View>
     </TouchableOpacity>
   );
 };
 
-// ─── COMPONENTE: StatBar ─────────────────────────────────────────────────────
-/**
- * Barra de estadística animada. Usa withTiming para una animación
- * de 800ms al montar → mejor experiencia que mostrar el valor estático.
- */
+// ─── STAT BAR ────────────────────────────────────────────────────────────────
 const StatBar: React.FC<{ label: string; value: number; color: string }> = ({
   label,
   value,
   color,
 }) => {
   const barWidth = useSharedValue(0);
-
   useEffect(() => {
-    barWidth.value = withTiming(value / 100, {
-      duration: 800,
-      easing: Easing.out(Easing.quad),
-    });
+    barWidth.value = withTiming(value / 100, { duration: 800, easing: Easing.out(Easing.quad) });
   }, [value]);
 
   const barStyle = useAnimatedStyle(() => ({
@@ -333,68 +354,44 @@ const StatBar: React.FC<{ label: string; value: number; color: string }> = ({
   );
 };
 
-// ─── COMPONENTE: PulsingBadge ────────────────────────────────────────────────
-/**
- * Badge que pulsa infinitamente usando withRepeat + withSequence.
- * withRepeat(-1) = repetición infinita.
- */
-const PulsingBadge: React.FC<{ text: string }> = ({ text }) => {
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 800 }),
-        withTiming(1, { duration: 800 })
-      ),
-      -1 // -1 = infinito
-    );
-  }, []);
-
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  return (
-    <Animated.View style={[styles.pulsingBadge, animStyle]}>
-      <Text style={styles.pulsingBadgeText}>{text}</Text>
-    </Animated.View>
-  );
-};
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── PANTALLA PRINCIPAL: InicioScreen ────────────────────────────────────────
+// ─── MAIN SCREEN ─────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function InicioScreen() {
-  const router = useRouter(); // Hook de navegación de Expo Router
   const [fontsLoaded] = useFonts({ Bangers_400Regular, Oswald_400Regular, Oswald_700Bold });
-
-  // Estado para el héroe aleatorio (se muestra cuando el usuario presiona "Random Hero")
+  const [featuredHeroes, setFeaturedHeroes] = useState<Hero[]>([]);
+  const [loading, setLoading] = useState(true);
   const [randomHero, setRandomHero] = useState<Hero | null>(null);
 
-  // NOTA: featuredHeroes y su loading ya NO están aquí.
-  // El carrusel de héroes destacados ahora vive en search/index.tsx
-
-  // ─ Animación flotante del banner ─────────────────────────────────────────
+  // Floating animation for the hero banner graphic
   const floatY = useSharedValue(0);
   useEffect(() => {
     floatY.value = withRepeat(
-      withSequence(
-        withTiming(-10, { duration: 2000 }),
-        withTiming(0, { duration: 2000 })
-      ),
+      withSequence(withTiming(-10, { duration: 2000 }), withTiming(0, { duration: 2000 })),
       -1
     );
   }, []);
-  const floatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatY.value }],
-  }));
 
-  // ─ Función: héroe aleatorio ───────────────────────────────────────────────
-  /**
-   * useCallback evita recrear esta función en cada render.
-   * Es buena práctica cuando se pasa como prop a un hijo o se usa en useEffect.
-   */
+  // Fetch featured heroes
+  useEffect(() => {
+    const fetchHeroes = async () => {
+      try {
+        const results = await Promise.all(
+          FEATURED_IDS.map((id) =>
+            fetch(`${API_BASE}/${id}`).then((r) => r.json())
+          )
+        );
+        setFeaturedHeroes(results.filter((h) => h.response !== 'error'));
+      } catch (e) {
+        console.warn('Failed to fetch heroes:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHeroes();
+  }, []);
+
   const fetchRandomHero = useCallback(async () => {
-    // IDs de la API van del 1 al 731
     const randomId = Math.floor(Math.random() * 731) + 1;
     try {
       const res = await fetch(`${API_BASE}/${randomId}`);
@@ -405,17 +402,7 @@ export default function InicioScreen() {
     }
   }, []);
 
-  // ─ Función: navegar a Búsqueda ────────────────────────────────────────────
-  /**
-   * Navega a la tab de Búsqueda usando Expo Router.
-   * La ruta '/search' corresponde a app/(tabs)/(search)/index.tsx
-   * Ajusta la ruta si tu estructura de carpetas es diferente.
-   */
-  const goToSearch = useCallback(() => {
-    router.push('/(tabs)/(search)');
-  }, [router]);
 
-  // Mientras las fuentes cargan, mostramos un spinner
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -433,75 +420,58 @@ export default function InicioScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-
         {/* ══════════════════════════════════════════
-            SECCIÓN 1 — BANNER PRINCIPAL
-            Llama a la acción: los botones llevan a Búsqueda
+            SECTION 1 — HERO BANNER
         ══════════════════════════════════════════ */}
         <LinearGradient
           colors={[COMIC.ink, COMIC.darkBg2, '#110030']}
           style={styles.heroBanner}
         >
+          {/* Halftone overlay */}
           <HalftoneOverlay dotColor="rgba(255,214,0,0.07)" size={10} />
+
+          {/* Action-line radial burst (simulated with a View) */}
           <View style={styles.actionLinesOverlay} pointerEvents="none" />
 
-          {/* Etiqueta superior */}
+          {/* Eye-brow label */}
           <View style={styles.eyebrowWrap}>
             <View style={styles.eyebrow}>
-              <Text style={styles.eyebrowText}>⚡ THE ULTIMATE HERO DATABASE</Text>
+              <Text style={styles.eyebrowText}>THE ULTIMATE HERO DATABASE</Text>
             </View>
           </View>
 
-          {/* Badge pulsante en esquina superior derecha */}
-          <Animated.View style={[styles.floatingBadge, floatStyle]}>
-            <PulsingBadge text="1000+ Heroes" />
-          </Animated.View>
-
-          {/* Titular principal */}
+          {/* Main headline */}
           <View style={styles.headlineWrap}>
             <Text style={styles.headlineKnow}>KNOW YOUR</Text>
             <Text style={styles.headlineHeroes}>HEROES.</Text>
           </View>
 
-          {/* Subtítulo */}
+          {/* Subheadline */}
           <Text style={styles.subHeadline}>
             Search stats, explore powers, and discover origin stories for every hero you ever loved.
           </Text>
 
-          {/* ── BOTONES CTA ──
-              Ambos llevan a la tab de Búsqueda.
-              "Explore Heroes" → va directo a buscar.
-              "Random Hero"    → busca héroe aleatorio Y muestra resultado aquí.
-          */}
+          {/* CTA Buttons */}
           <View style={styles.heroCtas}>
             <ComicButton
               label="EXPLORE HEROES"
-              emoji="⚡"
-              onPress={goToSearch} // ← Navega a Búsqueda
+              onPress={() => { /* navigate to search tab */ }}
               bg={COMIC.yellow}
               color={COMIC.ink}
               shadowColor={COMIC.red}
             />
             <ComicButton
               label="RANDOM HERO"
-              emoji="🎲"
-              onPress={fetchRandomHero} // ← Carga héroe aleatorio (sección 2)
+              onPress={fetchRandomHero}
               bg={COMIC.red}
               color="#fff"
               shadowColor={COMIC.ink}
             />
           </View>
-
-          {/* Onomatopeyas decorativas */}
-          <View style={styles.powWrap}>
-            <BurstLabel text="POW!" bg={COMIC.yellow} color={COMIC.ink} rotate={-12} />
-            <BurstLabel text="BOOM!" bg={COMIC.red} color="#fff" rotate={8} />
-          </View>
         </LinearGradient>
 
         {/* ══════════════════════════════════════════
-            SECCIÓN 2 — RESULTADO HÉROE ALEATORIO
-            Solo aparece después de presionar "Random Hero"
+            SECTION 2 — RANDOM HERO RESULT
         ══════════════════════════════════════════ */}
         {randomHero && (
           <View style={styles.randomHeroSection}>
@@ -509,26 +479,19 @@ export default function InicioScreen() {
               <View style={styles.sectionLabelLine} />
               <Text style={styles.sectionLabel}>🎲 RANDOM HERO</Text>
             </View>
-
             <View style={styles.randomHeroCard}>
-              {/* Franja de color lateral */}
+              {/* Accent strip */}
               <View style={[styles.randomHeroStripe, { backgroundColor: COMIC.red }]} />
-
-              {/* Imagen del héroe */}
               <Image
                 source={{ uri: randomHero.image.url }}
                 style={styles.randomHeroImage}
                 resizeMode="cover"
               />
-
-              {/* Info y stats */}
               <View style={styles.randomHeroBody}>
                 <Text style={styles.randomHeroName}>{randomHero.name.toUpperCase()}</Text>
                 <Text style={styles.randomHeroPublisher}>
                   {randomHero.biography.publisher || 'Unknown Publisher'}
                 </Text>
-
-                {/* Barras de estadísticas (máximo 4) */}
                 <View style={styles.randomHeroStats}>
                   {Object.entries(randomHero.powerstats)
                     .filter(([, v]) => v !== 'null')
@@ -542,138 +505,20 @@ export default function InicioScreen() {
                       />
                     ))}
                 </View>
-
-                {/* Botón que lleva a Búsqueda para ver perfil completo */}
-                <ComicButton
-                  label="SEE FULL PROFILE"
-                  onPress={goToSearch} // ← Navega a Búsqueda
-                  bg={COMIC.yellow}
-                  color={COMIC.ink}
-                  shadowColor={COMIC.ink}
-                  style={{ marginTop: 14 }}
-                />
               </View>
             </View>
-
-            {/* Botón para buscar otro héroe aleatorio */}
-            <ComicButton
-              label="ANOTHER HERO"
-              emoji="🎲"
-              bg={COMIC.ink}
-              color={COMIC.yellow}
-              shadowColor={COMIC.red}
-              style={{ marginTop: 16, alignSelf: 'flex-start' }}
-              onPress={fetchRandomHero}
-            />
           </View>
         )}
-
-        {/* ══════════════════════════════════════════
-            SECCIÓN 3 — QUICK ACTION PANELS
-            Todos los paneles llevan a la tab Búsqueda
-        ══════════════════════════════════════════ */}
-        <View style={styles.actionsSection}>
-          <HalftoneOverlay dotColor="rgba(0,0,0,0.04)" size={12} />
-
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionLabelLine} />
-            <Text style={styles.sectionLabel}>🦸 YOUR POWERS</Text>
-          </View>
-          <Text style={styles.sectionTitle}>Choose Your Mission</Text>
-
-          {/*
-           * Solo 2 paneles: SEARCH y RANDOM HERO.
-           * COMPARE HEROES y TOP HEROES se quitaron porque todavía
-           * no están implementados en la app — mejor no mostrar
-           * acciones que no funcionan aún.
-           */}
-          <View style={styles.actionsGrid}>
-            <ActionPanel
-              emoji="🔍"
-              title="SEARCH ALL HEROES"
-              subtitle="1,000+ characters"
-              bg={COMIC.blue}
-              burst="NEW"
-              onPress={goToSearch} // ← Navega a Búsqueda
-            />
-            <ActionPanel
-              emoji="🎲"
-              title="RANDOM HERO"
-              subtitle="Discover someone new"
-              bg={COMIC.ink}
-              burst="GO!"
-              onPress={fetchRandomHero} // ← Carga héroe aleatorio arriba
-            />
-          </View>
-        </View>
-
-        {/* ══════════════════════════════════════════
-            SECCIÓN 4 — STATS TICKER
-            Datos generales de la app
-        ══════════════════════════════════════════ */}
-        <View style={styles.statsTicker}>
-          {[
-            { n: '1,000+', l: 'Heroes' },
-            { n: '731', l: 'Powers' },
-            { n: '2', l: 'Universes' },
-            { n: '6', l: 'Stat Types' },
-            { n: '∞', l: 'Fun' },
-          ].map((item, i) => (
-            <View key={i} style={styles.statsTickerItem}>
-              <Text style={styles.statsTickerNumber}>{item.n}</Text>
-              <Text style={styles.statsTickerLabel}>{item.l}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* ══════════════════════════════════════════
-            SECCIÓN 5 — FOOTER CRÉDITOS
-        ══════════════════════════════════════════ */}
-        <LinearGradient colors={[COMIC.ink, '#0A0014']} style={styles.footerCredit}>
-          <HalftoneOverlay dotColor="rgba(255,214,0,0.05)" size={8} />
-          <View style={styles.footerRainbowBar} />
-
-          <View style={styles.footerLogoWrap}>
-            <Text style={styles.footerLogo}>HeroVerse</Text>
-          </View>
-
-          <View style={styles.footerDivider} />
-
-          <Text style={styles.footerCreditLabel}>✦ DESIGNED & DEVELOPED BY ✦</Text>
-          <Text style={styles.footerCreditNames}>
-            Santiago Duque Robledo{'\n'}&amp; Cesar David Arias Posada
-          </Text>
-          <Text style={styles.footerApiNote}>
-            Powered by SuperHero API · superheroapi.com
-          </Text>
-
-          <View style={styles.footerBursts}>
-            <BurstLabel text="POW!" bg={COMIC.yellow} color={COMIC.ink} rotate={-10} />
-            <BurstLabel text="ZAP!" bg={COMIC.red} color="#fff" rotate={12} />
-          </View>
-
-          <Text style={styles.footerCopyright}>
-            © 2025 HeroVerse · Not affiliated with Marvel or DC Comics
-          </Text>
-        </LinearGradient>
-
       </ScrollView>
     </View>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── ESTILOS ──────────────────────────────────────────────────────────────────
+// ─── STYLES ──────────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
-/**
- * BUENA PRÁCTICA: usar StyleSheet.create() en lugar de objetos inline.
- * Razones:
- *  1. Los estilos se validan en tiempo de desarrollo
- *  2. Se optimizan en puente JS→Native (se envían una sola vez)
- *  3. Mejor legibilidad y mantenimiento
- */
 const styles = StyleSheet.create({
-  // ── RAÍZ ──────────────────────────────────────────────────────────────────
+  // Root
   root: { flex: 1, backgroundColor: COMIC.ink },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 0 },
@@ -684,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── BANNER HERO ───────────────────────────────────────────────────────────
+  // ── HERO BANNER ─────────────────────────────────────────────────────────────
   heroBanner: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 50,
@@ -695,6 +540,7 @@ const styles = StyleSheet.create({
   },
   actionLinesOverlay: {
     ...StyleSheet.absoluteFillObject,
+    // Simulated radial lines via a very subtle overlay
     opacity: 0.04,
     backgroundColor: COMIC.yellow,
   },
@@ -712,11 +558,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     color: COMIC.yellow,
     textTransform: 'uppercase',
-  },
-  floatingBadge: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 68 : 48,
-    right: 24,
   },
   pulsingBadge: {
     backgroundColor: COMIC.red,
@@ -743,6 +584,7 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     color: '#fff',
     lineHeight: COMIC.heroTitle * 1.0,
+    // Simulated text stroke via text shadow layering
     textShadowColor: COMIC.ink,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
@@ -771,9 +613,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginBottom: 24,
   },
-  powWrap: { flexDirection: 'row', gap: 12, marginTop: 8 },
 
-  // ── SECCIÓN HÉROE ALEATORIO ───────────────────────────────────────────────
+  // ── RANDOM HERO SECTION ──────────────────────────────────────────────────────
   randomHeroSection: {
     backgroundColor: COMIC.paper2,
     borderBottomWidth: COMIC.borderWidthThick,
@@ -793,9 +634,18 @@ const styles = StyleSheet.create({
     elevation: 8,
     flexDirection: 'row',
   },
-  randomHeroStripe: { width: 6, alignSelf: 'stretch' },
-  randomHeroImage: { width: 130, height: 180 },
-  randomHeroBody: { flex: 1, padding: 16 },
+  randomHeroStripe: {
+    width: 6,
+    alignSelf: 'stretch',
+  },
+  randomHeroImage: {
+    width: 130,
+    height: 180,
+  },
+  randomHeroBody: {
+    flex: 1,
+    padding: 16,
+  },
   randomHeroName: {
     fontFamily: 'Bangers_400Regular',
     fontSize: 22,
@@ -816,7 +666,7 @@ const styles = StyleSheet.create({
   },
   randomHeroStats: { gap: 6 },
 
-  // ── BARRA DE ESTADÍSTICA ──────────────────────────────────────────────────
+  // ── STAT BAR ─────────────────────────────────────────────────────────────────
   statRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statLabel: {
     fontFamily: 'Oswald_700Bold',
@@ -833,7 +683,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     overflow: 'hidden',
   },
-  statBarFill: { height: '100%', borderRadius: 3 },
+  statBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
   statValue: {
     fontFamily: 'Oswald_700Bold',
     fontSize: 10,
@@ -842,89 +695,89 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  // ── PANELES DE ACCIÓN RÁPIDA ──────────────────────────────────────────────
-  actionsSection: {
-    backgroundColor: COMIC.paper2,
+  // ── FEATURED HEROES ──────────────────────────────────────────────────────────
+  featuredSection: {
+    backgroundColor: COMIC.paper,
     paddingVertical: 36,
-    paddingHorizontal: 24,
     borderBottomWidth: COMIC.borderWidthThick,
     borderBottomColor: COMIC.ink,
     overflow: 'hidden',
   },
-  actionsGrid: { flexDirection: 'row', gap: 14 },
-  actionPanel: {
+  heroCardsScroll: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    gap: 16,
+  },
+  heroCard: {
+    width: 160,
     borderWidth: COMIC.borderWidth,
-    borderColor: COMIC.ink,
-    borderRadius: COMIC.radius,
-    padding: 18,
+    borderRadius: COMIC.radiusCard,
     overflow: 'hidden',
     position: 'relative',
     shadowColor: COMIC.ink,
-    shadowOffset: { width: 5, height: 5 },
+    shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,
     shadowRadius: 0,
-    elevation: 7,
-    minHeight: 110,
-    justifyContent: 'flex-end',
+    elevation: 8,
   },
-  actionPanelShadow: {
+  heroCardStripe: {
+    height: 5,
+    width: '100%',
+  },
+  heroCardShadow: {
     position: 'absolute',
     top: 5,
     left: 5,
     right: -5,
     bottom: -5,
-    borderRadius: COMIC.radius,
+    borderRadius: COMIC.radiusCard,
+    zIndex: -1,
+    opacity: 0.3,
   },
-  actionEmoji: { fontSize: 28, marginBottom: 4 },
-  actionTitle: {
+  heroCardImageWrap: {
+    height: 200,
+    position: 'relative',
+  },
+  heroCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroCardInfo: {
+    padding: 12,
+    backgroundColor: COMIC.darkBg,
+  },
+  heroCardName: {
     fontFamily: 'Bangers_400Regular',
     fontSize: 16,
     letterSpacing: 1.5,
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 0,
-  },
-  actionSubtitle: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 10,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
-    marginTop: 2,
-  },
-  actionBurst: { position: 'absolute', top: 10, right: 10 },
-
-  // ── STATS TICKER ──────────────────────────────────────────────────────────
-  statsTicker: {
-    backgroundColor: COMIC.red,
-    borderTopWidth: COMIC.borderWidthThick,
-    borderBottomWidth: COMIC.borderWidthThick,
-    borderColor: COMIC.ink,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 20,
-    paddingHorizontal: 8,
-  },
-  statsTickerItem: { alignItems: 'center', gap: 2 },
-  statsTickerNumber: {
-    fontFamily: 'Bangers_400Regular',
-    fontSize: 26,
-    letterSpacing: 1,
     color: COMIC.yellow,
-    textShadowColor: COMIC.ink,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
+    marginBottom: 2,
   },
-  statsTickerLabel: {
+  heroCardPublisher: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.45)',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  heroCardStatPill: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+  },
+  heroCardStatText: {
     fontFamily: 'Oswald_700Bold',
     fontSize: 9,
-    letterSpacing: 2,
-    color: '#fff',
-    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.7)',
   },
 
-  // ── ENCABEZADO DE SECCIÓN ─────────────────────────────────────────────────
+  // ── SECTION COMMON ───────────────────────────────────────────────────────────
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -932,7 +785,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 8,
   },
-  sectionLabelLine: { width: 30, height: 3, backgroundColor: COMIC.red },
+  sectionLabelLine: {
+    width: 30,
+    height: 3,
+    backgroundColor: COMIC.red,
+  },
   sectionLabel: {
     fontFamily: 'Oswald_700Bold',
     fontSize: COMIC.label,
@@ -951,76 +808,23 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 0,
   },
-
-  // ── FOOTER ────────────────────────────────────────────────────────────────
-  footerCredit: {
-    paddingTop: 48,
-    paddingBottom: 40,
+  sectionSub: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 13,
+    color: '#666',
     paddingHorizontal: 24,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  loadingRow: {
     alignItems: 'center',
-    borderTopWidth: COMIC.borderWidthThick,
-    borderTopColor: COMIC.yellow,
-    overflow: 'hidden',
-    position: 'relative',
+    paddingVertical: 40,
+    gap: 14,
   },
-  footerRainbowBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 5,
-    backgroundColor: COMIC.yellow,
-  },
-  footerLogoWrap: { marginBottom: 16 },
-  footerLogo: {
+  loadingText: {
     fontFamily: 'Bangers_400Regular',
-    fontSize: 40,
-    letterSpacing: 4,
-    color: COMIC.yellow,
-    textShadowColor: COMIC.red,
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 0,
-  },
-  footerDivider: {
-    width: '80%',
-    height: 2,
-    backgroundColor: 'rgba(255,214,0,0.25)',
-    marginBottom: 22,
-  },
-  footerCreditLabel: {
-    fontFamily: 'Oswald_700Bold',
-    fontSize: 10,
-    letterSpacing: 4,
-    color: 'rgba(255,255,255,0.4)',
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-  footerCreditNames: {
-    fontFamily: 'Bangers_400Regular',
-    fontSize: 22,
-    letterSpacing: 2,
-    color: COMIC.yellow,
-    textAlign: 'center',
-    lineHeight: 30,
-    textShadowColor: COMIC.red,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 0,
-    marginBottom: 10,
-  },
-  footerApiNote: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 10,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.35)',
-    textTransform: 'uppercase',
-    marginBottom: 24,
-  },
-  footerBursts: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  footerCopyright: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 10,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.2)',
-    textAlign: 'center',
+    fontSize: 20,
+    letterSpacing: 3,
+    color: COMIC.ink,
   },
 });
