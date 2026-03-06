@@ -9,7 +9,7 @@ export default function TabLayout() {
         screenOptions={{
             tabBarStyle: styles.tabBar,
             headerShown: false,
-            tabBarActiveTintColor: "red",
+            tabBarActiveTintColor: "#FFD600",
             tabBarInactiveTintColor: "white",
         }}
     >
@@ -31,7 +31,7 @@ export default function TabLayout() {
             name="(data)"
             options={{
                 title: "Data",
-                tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={24} color={color} />,
+                tabBarIcon: ({ color }) => <Ionicons name="book-outline" size={24} color={color} />,
             }}
         />
         </Tabs>
@@ -40,6 +40,6 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
     tabBar: {
-        backgroundColor: "#0d0d0e",
+        backgroundColor: "#000000",
     },
 })

@@ -8,7 +8,7 @@ export default function HomeLayout() {
                 headerTitle: "Inicio"
             }}
         >
-            <Stack.Screen name="index2" />
+            <Stack.Screen name="index" />
         </Stack>
     );
 }
