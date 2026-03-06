@@ -43,7 +43,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",
-    borderTopWidth: 5,
     overflow: "hidden",
     position: "relative",
     flex: 1,
