@@ -17,38 +17,28 @@
  *   The component is self-contained; all styles live at the bottom.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
   StatusBar,
   Image,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
+import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSpring,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
 import { useFonts, Bangers_400Regular } from '@expo-google-fonts/bangers';
 import { Oswald_400Regular, Oswald_700Bold } from '@expo-google-fonts/oswald';
+import HalftoneOverlay from "@/src/components/HalftoneOverlay/HalftoneOverlay";
+import ComicButton from '@/src/components/ComicButton/ComicButton';
+import StatBar from '@/src/components/StatBar/StatBar';
 
 // ─── Superhero API ──────────────────────────────────────────────────────────
 const API_KEY = 'ddc92e6ed8ef5366368a9cff47b3dd8c'; // Replace with your key from superheroapi.com
 const API_BASE = `https://superheroapi.com/api/${API_KEY}`;
-
-// Curated featured hero IDs (spectacular visual variety)
-const FEATURED_IDS = [70, 195, 332, 387, 583, 720]; // Batman, Captain America, Ironman, Thor, Spider-Man, Wonder Woman
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Hero {
@@ -68,335 +58,33 @@ interface Hero {
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// ─── THEME ───────────────────────────────────────────────────────────────────
-export const COMIC = {
-  // Core palette – mirrors the landing page exactly
-  red: '#E8173D',
-  yellow: '#FFD600',
-  blue: '#0057FF',
-  ink: '#1A1028',
-  paper: '#FFF9EE',
-  paper2: '#FFF3D6',
-  darkBg: '#0A0A2E',
-  darkBg2: '#1A0040',
-
-  // Typography sizes
-  heroTitle: 52,
-  sectionTitle: 32,
-  cardTitle: 18,
-  body: 14,
-  label: 11,
-
-  // Comic border radius (mostly sharp)
-  radius: 4,
-  radiusCard: 8,
-
-  // Ink borders
-  borderWidth: 3,
-  borderWidthThick: 5,
-};
-
-// ─── HALFTONE DOT PATTERN (pure RN, no SVG dep) ──────────────────────────────
-// We simulate Ben-Day dots with a repeating grid of tiny View dots.
-const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: number }> = ({
-  color = 'transparent',
-  dotColor = 'rgba(0,0,0,0.06)',
-  size = 8,
-}) => {
-  const cols = Math.ceil(SCREEN_W / size) + 2;
-  const rows = 14; // enough for most containers
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {Array.from({ length: rows }).map((_, r) => (
-        <View key={r} style={{ flexDirection: 'row' }}>
-          {Array.from({ length: cols }).map((_, c) => (
-            <View
-              key={c}
-              style={{
-                width: size,
-                height: size,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <View
-                style={{
-                  width: size * 0.3,
-                  height: size * 0.3,
-                  borderRadius: size,
-                  backgroundColor: dotColor,
-                }}
-              />
-            </View>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-};
-
-// ─── COMIC BURST LABEL (POW!, ZAP! style) ────────────────────────────────────
-const BurstLabel: React.FC<{
-  text: string;
-  bg?: string;
-  color?: string;
-  rotate?: number;
-  style?: object;
-}> = ({ text, bg = COMIC.yellow, color = COMIC.ink, rotate = -8, style }) => (
-  <View
-    style={[
-      {
-        backgroundColor: bg,
-        borderWidth: COMIC.borderWidth,
-        borderColor: COMIC.ink,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        transform: [{ rotate: `${rotate}deg` }],
-        shadowColor: COMIC.ink,
-        shadowOffset: { width: 3, height: 3 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 6,
-      },
-      style,
-    ]}
-  >
-    <Text
-      style={{
-        fontFamily: 'Bangers_400Regular',
-        fontSize: 14,
-        letterSpacing: 2,
-        color,
-      }}
-    >
-      {text}
-    </Text>
-  </View>
-);
-
-// ─── COMIC BUTTON ────────────────────────────────────────────────────────────
-const ComicButton: React.FC<{
-  label: string;
-  emoji?: string;
-  onPress: () => void;
-  bg?: string;
-  color?: string;
-  shadowColor?: string;
-  style?: object;
-}> = ({
-  label,
-  emoji,
-  onPress,
-  bg = COMIC.yellow,
-  color = COMIC.ink,
-  shadowColor = COMIC.ink,
-  style,
-}) => {
-  const scale = useSharedValue(1);
-  const offsetX = useSharedValue(0);
-  const offsetY = useSharedValue(0);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: offsetX.value }, { translateY: offsetY.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.94, { damping: 10 });
-    offsetX.value = withTiming(3, { duration: 80 });
-    offsetY.value = withTiming(3, { duration: 80 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 8 });
-    offsetX.value = withTiming(0, { duration: 120 });
-    offsetY.value = withTiming(0, { duration: 120 });
-  };
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
-    >
-      {/* Hard ink shadow offset layer */}
-      <View
-        style={[
-          {
-            backgroundColor: shadowColor,
-            borderRadius: COMIC.radius,
-            position: 'absolute',
-            top: 5,
-            left: 5,
-            right: -5,
-            bottom: -5,
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          {
-            backgroundColor: bg,
-            borderWidth: COMIC.borderWidth,
-            borderColor: COMIC.ink,
-            borderRadius: COMIC.radius,
-            paddingVertical: 13,
-            paddingHorizontal: 22,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-          },
-          animStyle,
-          style,
-        ]}
-      >
-        {emoji && <Text style={{ fontSize: 18 }}>{emoji}</Text>}
-        <Text
-          style={{
-            fontFamily: 'Bangers_400Regular',
-            fontSize: 18,
-            letterSpacing: 2,
-            color,
-          }}
-        >
-          {label}
-        </Text>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
-
-// ─── HERO CARD (featured) ────────────────────────────────────────────────────
-const HeroCard: React.FC<{ hero: Hero; onPress: () => void; accent: string }> = ({
-  hero,
-  onPress,
-  accent,
-}) => {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  const stats = hero.powerstats;
-  const topStat = Object.entries(stats)
-    .filter(([, v]) => v !== 'null')
-    .sort(([, a], [, b]) => Number(b) - Number(a))[0];
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.96); }}
-      onPressOut={() => { scale.value = withSpring(1); }}
-      activeOpacity={1}
-    >
-      <Animated.View style={[styles.heroCard, { borderColor: COMIC.ink }, animStyle]}>
-        {/* Accent top stripe */}
-        <View style={[styles.heroCardStripe, { backgroundColor: accent }]} />
-
-        {/* Hard shadow */}
-        <View style={[styles.heroCardShadow, { backgroundColor: accent }]} />
-
-        {/* Hero image */}
-        <View style={styles.heroCardImageWrap}>
-          <Image
-            source={{ uri: hero.image.url }}
-            style={styles.heroCardImage}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(10,10,46,0.95)']}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-
-        {/* Info */}
-        <View style={styles.heroCardInfo}>
-          <Text style={styles.heroCardName} numberOfLines={1}>
-            {hero.name.toUpperCase()}
-          </Text>
-          <Text style={styles.heroCardPublisher} numberOfLines={1}>
-            {hero.biography.publisher || 'Unknown Publisher'}
-          </Text>
-          {topStat && (
-            <View style={styles.heroCardStatPill}>
-              <Text style={styles.heroCardStatText}>
-                {topStat[0].toUpperCase()}: {topStat[1]}
-              </Text>
-            </View>
-          )}
-        </View>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
-
-// ─── STAT BAR ────────────────────────────────────────────────────────────────
-const StatBar: React.FC<{ label: string; value: number; color: string }> = ({
-  label,
-  value,
-  color,
-}) => {
-  const barWidth = useSharedValue(0);
-  useEffect(() => {
-    barWidth.value = withTiming(value / 100, { duration: 800, easing: Easing.out(Easing.quad) });
-  }, [value]);
-
-  const barStyle = useAnimatedStyle(() => ({
-    width: `${barWidth.value * 100}%`,
-  }));
-
-  return (
-    <View style={styles.statRow}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <View style={styles.statBarBg}>
-        <Animated.View style={[styles.statBarFill, { backgroundColor: color }, barStyle]} />
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
-  );
-};
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── MAIN SCREEN ─────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function InicioScreen() {
   const [fontsLoaded] = useFonts({ Bangers_400Regular, Oswald_400Regular, Oswald_700Bold });
-  const [featuredHeroes, setFeaturedHeroes] = useState<Hero[]>([]);
-  const [loading, setLoading] = useState(true);
   const [randomHero, setRandomHero] = useState<Hero | null>(null);
-
-  // Floating animation for the hero banner graphic
-  const floatY = useSharedValue(0);
-  useEffect(() => {
-    floatY.value = withRepeat(
-      withSequence(withTiming(-10, { duration: 2000 }), withTiming(0, { duration: 2000 })),
-      -1
-    );
-  }, []);
-
-  // Fetch featured heroes
-  useEffect(() => {
-    const fetchHeroes = async () => {
-      try {
-        const results = await Promise.all(
-          FEATURED_IDS.map((id) =>
-            fetch(`${API_BASE}/${id}`).then((r) => r.json())
-          )
-        );
-        setFeaturedHeroes(results.filter((h) => h.response !== 'error'));
-      } catch (e) {
-        console.warn('Failed to fetch heroes:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHeroes();
-  }, []);
 
   const fetchRandomHero = useCallback(async () => {
     const randomId = Math.floor(Math.random() * 731) + 1;
     try {
-      const res = await fetch(`${API_BASE}/${randomId}`);
-      const data = await res.json();
-      if (data.response !== 'error') setRandomHero(data);
+      // Make multiple calls for different sections
+      const [bioRes, imageRes, statsRes] = await Promise.all([
+        axios.get(`${API_BASE}/${randomId}/biography`),
+        axios.get(`${API_BASE}/${randomId}/image`),
+        axios.get(`${API_BASE}/${randomId}/powerstats`)
+      ]);
+      
+      // Combine the data
+      const combinedHero = {
+        id: randomId.toString(),
+        name: bioRes.data.name || `Hero ${randomId}`,
+        biography: bioRes.data,
+        image: imageRes.data,
+        powerstats: statsRes.data
+      };
+      
+      if (bioRes.data.response !== 'error') setRandomHero(combinedHero);
     } catch (e) {
       console.warn('Random hero fetch failed:', e);
     }
@@ -406,14 +94,14 @@ export default function InicioScreen() {
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COMIC.yellow} />
+        <ActivityIndicator size="large" color={"#FFD600"} />
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={COMIC.ink} />
+      <StatusBar barStyle="light-content" backgroundColor={'#1A1028'} />
 
       <ScrollView
         style={styles.scroll}
@@ -424,7 +112,7 @@ export default function InicioScreen() {
             SECTION 1 — HERO BANNER
         ══════════════════════════════════════════ */}
         <LinearGradient
-          colors={[COMIC.ink, COMIC.darkBg2, '#110030']}
+          colors={['#1A1028', '#1A0040', '#110030']}
           style={styles.heroBanner}
         >
           {/* Halftone overlay */}
@@ -454,18 +142,11 @@ export default function InicioScreen() {
           {/* CTA Buttons */}
           <View style={styles.heroCtas}>
             <ComicButton
-              label="EXPLORE HEROES"
-              onPress={() => { /* navigate to search tab */ }}
-              bg={COMIC.yellow}
-              color={COMIC.ink}
-              shadowColor={COMIC.red}
-            />
-            <ComicButton
               label="RANDOM HERO"
               onPress={fetchRandomHero}
-              bg={COMIC.red}
+              bg={'#E8173D'}
               color="#fff"
-              shadowColor={COMIC.ink}
+              shadowColor={'#1A1028'}
             />
           </View>
         </LinearGradient>
@@ -473,19 +154,29 @@ export default function InicioScreen() {
         {/* ══════════════════════════════════════════
             SECTION 2 — RANDOM HERO RESULT
         ══════════════════════════════════════════ */}
-        {randomHero && (
+        {randomHero &&  (
           <View style={styles.randomHeroSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionLabelLine} />
-              <Text style={styles.sectionLabel}>🎲 RANDOM HERO</Text>
+              <Text style={styles.sectionLabel}>RANDOM HERO</Text>
             </View>
             <View style={styles.randomHeroCard}>
               {/* Accent strip */}
-              <View style={[styles.randomHeroStripe, { backgroundColor: COMIC.red }]} />
+              <View style={[styles.randomHeroStripe, { backgroundColor: '#E8173D' }]} />
               <Image
-                source={{ uri: randomHero.image.url }}
+                source={{ 
+                  uri: randomHero.image.url, 
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Referer': 'https://superheroapi.com/'
+                  }
+                }}
                 style={styles.randomHeroImage}
                 resizeMode="cover"
+                onError={(e) => {
+                  console.log('Image failed to load:', randomHero.image.url, e.nativeEvent.error);
+                  // You could set a fallback image here if needed
+                }}
               />
               <View style={styles.randomHeroBody}>
                 <Text style={styles.randomHeroName}>{randomHero.name.toUpperCase()}</Text>
@@ -501,7 +192,7 @@ export default function InicioScreen() {
                         key={key}
                         label={key.toUpperCase().slice(0, 3)}
                         value={Number(val)}
-                        color={COMIC.red}
+                        color={'#E8173D'}
                       />
                     ))}
                 </View>
@@ -519,53 +210,51 @@ export default function InicioScreen() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   // Root
-  root: { flex: 1, backgroundColor: COMIC.ink },
-  scroll: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#1A1028' },
+  scroll: { flex: 1},
   scrollContent: { paddingBottom: 0 },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COMIC.ink,
+    backgroundColor: '#1A1028',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // ── HERO BANNER ─────────────────────────────────────────────────────────────
   heroBanner: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: 40,
     paddingBottom: 50,
     paddingHorizontal: 24,
-    borderBottomWidth: COMIC.borderWidthThick,
-    borderBottomColor: COMIC.yellow,
     overflow: 'hidden',
   },
   actionLinesOverlay: {
     ...StyleSheet.absoluteFillObject,
     // Simulated radial lines via a very subtle overlay
     opacity: 0.04,
-    backgroundColor: COMIC.yellow,
+    backgroundColor: '#FFD600',
   },
   eyebrowWrap: { alignItems: 'flex-start', marginBottom: 20 },
   eyebrow: {
-    backgroundColor: COMIC.ink,
+    backgroundColor: '#1A1028',
     borderWidth: 2,
-    borderColor: COMIC.yellow,
+    borderColor: '#FFD600',
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
   eyebrowText: {
     fontFamily: 'Oswald_700Bold',
-    fontSize: COMIC.label,
+    fontSize: 11,
     letterSpacing: 3,
-    color: COMIC.yellow,
+    color: '#FFD600',
     textTransform: 'uppercase',
   },
   pulsingBadge: {
-    backgroundColor: COMIC.red,
-    borderWidth: COMIC.borderWidth,
-    borderColor: COMIC.ink,
+    backgroundColor: '#E8173D',
+    borderWidth: 3,
+    borderColor: '#1A1028',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    shadowColor: COMIC.ink,
+    shadowColor: '#1A1028',
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -580,22 +269,22 @@ const styles = StyleSheet.create({
   headlineWrap: { marginBottom: 14 },
   headlineKnow: {
     fontFamily: 'Bangers_400Regular',
-    fontSize: COMIC.heroTitle,
+    fontSize: 52,
     letterSpacing: 3,
     color: '#fff',
-    lineHeight: COMIC.heroTitle * 1.0,
+    lineHeight: 52 * 1.0,
     // Simulated text stroke via text shadow layering
-    textShadowColor: COMIC.ink,
+    textShadowColor: '#1A1028',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
   headlineHeroes: {
     fontFamily: 'Bangers_400Regular',
-    fontSize: COMIC.heroTitle * 1.3,
+    fontSize: 52 * 1.3,
     letterSpacing: 3,
-    color: COMIC.yellow,
-    lineHeight: COMIC.heroTitle * 1.2,
-    textShadowColor: COMIC.ink,
+    color: '#FFD600',
+    lineHeight: 52 * 1.2,
+    textShadowColor: '#1A1028',
     textShadowOffset: { width: 4, height: 4 },
     textShadowRadius: 0,
   },
@@ -616,18 +305,18 @@ const styles = StyleSheet.create({
 
   // ── RANDOM HERO SECTION ──────────────────────────────────────────────────────
   randomHeroSection: {
-    backgroundColor: COMIC.paper2,
-    borderBottomWidth: COMIC.borderWidthThick,
-    borderBottomColor: COMIC.ink,
+    backgroundColor: '#FFF3D6',
+    borderBottomWidth: 5,
+    borderBottomColor: '#1A1028',
     padding: 24,
   },
   randomHeroCard: {
-    backgroundColor: COMIC.darkBg,
-    borderWidth: COMIC.borderWidth,
-    borderColor: COMIC.ink,
-    borderRadius: COMIC.radiusCard,
+    backgroundColor: '#0A0A2E',
+    borderWidth: 3,
+    borderColor: '#1A1028',
+    borderRadius: 8,
     overflow: 'hidden',
-    shadowColor: COMIC.ink,
+    shadowColor: '#1A1028',
     shadowOffset: { width: 7, height: 7 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -650,8 +339,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Bangers_400Regular',
     fontSize: 22,
     letterSpacing: 2,
-    color: COMIC.yellow,
-    textShadowColor: COMIC.ink,
+    color: '#FFD600',
+    textShadowColor: '#1A1028',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
     marginBottom: 2,
@@ -666,117 +355,6 @@ const styles = StyleSheet.create({
   },
   randomHeroStats: { gap: 6 },
 
-  // ── STAT BAR ─────────────────────────────────────────────────────────────────
-  statRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statLabel: {
-    fontFamily: 'Oswald_700Bold',
-    fontSize: 9,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.5)',
-    width: 30,
-    textTransform: 'uppercase',
-  },
-  statBarBg: {
-    flex: 1,
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  statBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  statValue: {
-    fontFamily: 'Oswald_700Bold',
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-    width: 26,
-    textAlign: 'right',
-  },
-
-  // ── FEATURED HEROES ──────────────────────────────────────────────────────────
-  featuredSection: {
-    backgroundColor: COMIC.paper,
-    paddingVertical: 36,
-    borderBottomWidth: COMIC.borderWidthThick,
-    borderBottomColor: COMIC.ink,
-    overflow: 'hidden',
-  },
-  heroCardsScroll: {
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    gap: 16,
-  },
-  heroCard: {
-    width: 160,
-    borderWidth: COMIC.borderWidth,
-    borderRadius: COMIC.radiusCard,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: COMIC.ink,
-    shadowOffset: { width: 6, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
-  },
-  heroCardStripe: {
-    height: 5,
-    width: '100%',
-  },
-  heroCardShadow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    right: -5,
-    bottom: -5,
-    borderRadius: COMIC.radiusCard,
-    zIndex: -1,
-    opacity: 0.3,
-  },
-  heroCardImageWrap: {
-    height: 200,
-    position: 'relative',
-  },
-  heroCardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroCardInfo: {
-    padding: 12,
-    backgroundColor: COMIC.darkBg,
-  },
-  heroCardName: {
-    fontFamily: 'Bangers_400Regular',
-    fontSize: 16,
-    letterSpacing: 1.5,
-    color: COMIC.yellow,
-    marginBottom: 2,
-  },
-  heroCardPublisher: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 9,
-    letterSpacing: 1.5,
-    color: 'rgba(255,255,255,0.45)',
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  heroCardStatPill: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-  },
-  heroCardStatText: {
-    fontFamily: 'Oswald_700Bold',
-    fontSize: 9,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.7)',
-  },
-
   // ── SECTION COMMON ───────────────────────────────────────────────────────────
   sectionHeader: {
     flexDirection: 'row',
@@ -788,23 +366,23 @@ const styles = StyleSheet.create({
   sectionLabelLine: {
     width: 30,
     height: 3,
-    backgroundColor: COMIC.red,
+    backgroundColor: '#E8173D',
   },
   sectionLabel: {
     fontFamily: 'Oswald_700Bold',
-    fontSize: COMIC.label,
+    fontSize: 11,
     letterSpacing: 4,
-    color: COMIC.red,
+    color: '#E8173D',
     textTransform: 'uppercase',
   },
   sectionTitle: {
     fontFamily: 'Bangers_400Regular',
-    fontSize: COMIC.sectionTitle,
+    fontSize: 32,
     letterSpacing: 2,
-    color: COMIC.ink,
+    color: '#1A1028',
     paddingHorizontal: 24,
     marginBottom: 6,
-    textShadowColor: COMIC.yellow,
+    textShadowColor: '#FFD600',
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 0,
   },
@@ -825,6 +403,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Bangers_400Regular',
     fontSize: 20,
     letterSpacing: 3,
-    color: COMIC.ink,
+    color: '#1A1028',
   },
 });
