@@ -1,18 +1,23 @@
-import React from "react";
-import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
 import AnimatedStatBar from "@/src/components/AnimatedStatBar/AnimatedStatBar";
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
 import {
   Modal,
-  View,
-  Text,
   Pressable,
   StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
+  Image
 } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
+} from "react-native-reanimated";
 
-interface Hero {
+export interface Hero {
   id: string;
   name: string;
   image: { url: string };
@@ -71,11 +76,11 @@ export default function HeroModal({
 
   const stats = [
     { label: "Intelligence", value: Number(hero.powerstats.intelligence) || 0 },
-    { label: "Strength",     value: Number(hero.powerstats.strength) || 0 },
-    { label: "Speed",        value: Number(hero.powerstats.speed) || 0 },
-    { label: "Durability",   value: Number(hero.powerstats.durability) || 0 },
-    { label: "Power",        value: Number(hero.powerstats.power) || 0 },
-    { label: "Combat",       value: Number(hero.powerstats.combat) || 0 },
+    { label: "Strength", value: Number(hero.powerstats.strength) || 0 },
+    { label: "Speed", value: Number(hero.powerstats.speed) || 0 },
+    { label: "Durability", value: Number(hero.powerstats.durability) || 0 },
+    { label: "Power", value: Number(hero.powerstats.power) || 0 },
+    { label: "Combat", value: Number(hero.powerstats.combat) || 0 },
   ];
 
   const top3 = [...stats]
@@ -84,7 +89,7 @@ export default function HeroModal({
     .slice(0, 3);
 
   const totalScore = stats.reduce((sum, s) => sum + s.value, 0);
-  const alignment  = (hero.biography.alignment ?? "neutral").toLowerCase();
+  const alignment = (hero.biography.alignment ?? "neutral").toLowerCase();
   const alignColor = ALIGNMENT_COLOR[alignment] ?? "#FFD600";
   const alignLabel = ALIGNMENT_LABEL[alignment] ?? alignment.toUpperCase();
 
@@ -110,11 +115,12 @@ export default function HeroModal({
           exiting={SlideOutDown.duration(200)}
           style={styles.sheet}
         >
-          {/* Yellow top stripe */}
-          <View style={styles.topStripe} />
-
           {/* ✕ close */}
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeBtn}
+            activeOpacity={0.7}
+          >
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
 
@@ -125,7 +131,7 @@ export default function HeroModal({
               <Image
                 source={{ uri: hero.image.url }}
                 style={styles.image}
-                contentFit="cover"
+                resizeMode="cover"
               />
               <LinearGradient
                 colors={["transparent", "rgba(10,10,46,0.55)"]}
@@ -139,15 +145,20 @@ export default function HeroModal({
 
             {/* Info */}
             <View style={styles.info}>
-              <Text style={styles.heroName} numberOfLines={2} adjustsFontSizeToFit>
+              <Text
+                style={styles.heroName}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
                 {hero.name.toUpperCase()}
               </Text>
 
-              {hero.biography["full-name"] !== "-" && hero.biography["full-name"] && (
-                <Text style={styles.fullName} numberOfLines={1}>
-                  {hero.biography["full-name"]}
-                </Text>
-              )}
+              {hero.biography["full-name"] !== "-" &&
+                hero.biography["full-name"] && (
+                  <Text style={styles.fullName} numberOfLines={1}>
+                    {hero.biography["full-name"]}
+                  </Text>
+                )}
 
               <Text style={styles.publisher} numberOfLines={1}>
                 {hero.biography.publisher || "Unknown Publisher"}
@@ -155,7 +166,7 @@ export default function HeroModal({
 
               {totalScore > 0 && (
                 <View style={styles.scorePill}>
-                  <Text style={styles.scoreText}>⚡ {totalScore} / 600</Text>
+                  <Text style={styles.scoreText}>{totalScore} / 600</Text>
                 </View>
               )}
             </View>
@@ -165,7 +176,12 @@ export default function HeroModal({
           <View style={styles.statsBlock}>
             <Text style={styles.statsLabel}>TOP STATS</Text>
             {top3.map((s, i) => (
-              <AnimatedStatBar key={s.label} label={s.label} value={s.value} delay={i * 80} />
+              <AnimatedStatBar
+                key={s.label}
+                label={s.label}
+                value={s.value}
+                delay={i * 80}
+              />
             ))}
           </View>
 
@@ -178,7 +194,7 @@ export default function HeroModal({
             >
               <View style={styles.btnShadow} />
               <View style={styles.btnBody}>
-                <Text style={styles.btnText}>⚡ VIEW FULL PROFILE</Text>
+                <Text style={styles.btnText}>VIEW FULL PROFILE</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -192,7 +208,9 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(10,10,46,0.75)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignContent: "center",
+    paddingLeft:20
   },
   sheet: {
     backgroundColor: "#0A0A2E",
@@ -207,14 +225,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 0,
     elevation: 20,
+    maxWidth: "95%",
   },
-  topStripe: { height: 4, backgroundColor: "#FFD600" },
 
   closeBtn: {
     position: "absolute",
-    top: 12, right: 14,
+    top: 12,
+    right: 14,
     zIndex: 10,
-    width: 28, height: 28,
+    width: 28,
+    height: 28,
     borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.1)",
     borderWidth: 1,
@@ -248,7 +268,9 @@ const styles = StyleSheet.create({
   image: { width: "100%", height: "100%" },
   alignChip: {
     position: "absolute",
-    bottom: 0, left: 0, right: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingVertical: 3,
     alignItems: "center",
   },
@@ -320,7 +342,10 @@ const styles = StyleSheet.create({
   viewFullBtn: { position: "relative" },
   btnShadow: {
     position: "absolute",
-    top: 4, left: 4, right: -4, bottom: -4,
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
     backgroundColor: "#E8173D",
     borderRadius: 4,
   },

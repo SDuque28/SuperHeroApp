@@ -1,10 +1,3 @@
-/**
- * app/hero/[id].tsx — Hero Full Profile Screen
- *
- * Receives params from router.push():
- *   id       — hero numeric ID (string)
- *   heroData — full Hero object as JSON string (avoids extra fetch)
- */
 
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -282,7 +275,7 @@ export default function HeroDetailScreen() {
 
           {/* WORK — only if data exists */}
           {(hero.work?.occupation || hero.work?.base) && (
-            <Section title="🏢 WORK" color="#00C853">
+            <Section title="WORK" color="#00C853">
               <InfoRow label="Occupation" value={hero.work.occupation} color="#00C853" />
               <InfoRow label="Base"       value={hero.work.base}       color="#00C853" />
             </Section>

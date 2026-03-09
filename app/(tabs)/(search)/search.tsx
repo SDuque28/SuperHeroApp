@@ -17,7 +17,6 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-na
 import axios, { isAxiosError } from "axios";
 import HalftoneOverlay from "@/src/components/HalftoneOverlay/HalftoneOverlay";
 import HeroModal from "@/src/components/HeroModal/HeroModal";
-import HeroDetailCard from "@/src/components/HeroDetailCard/HeroDetailCard";
 
 // ─── AXIOS ───────────────────────────────────────────────────────────────────
 const API_KEY = "ddc92e6ed8ef5366368a9cff47b3dd8c";
@@ -223,7 +222,6 @@ export default function SearchScreen() {
                 <Text style={styles.loadingText}>SCANNING DATABASE...</Text>
               </View>
             )}
-
             {!searching && searchError !== "" && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyEmoji}>🦹</Text>
@@ -234,25 +232,6 @@ export default function SearchScreen() {
                 <TouchableOpacity onPress={clearSearch} style={styles.emptyBtn}>
                   <Text style={styles.emptyBtnText}>TRY AGAIN</Text>
                 </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Show list only when there are multiple results */}
-            {!searching && results.length > 1 && (
-              <View>
-                <View style={styles.resultsHeader}>
-                  <View style={styles.labelLine} />
-                  <Text style={styles.sectionLabel}>{results.length} RESULTS FOUND</Text>
-                  <Text style={styles.tapHint}>TAP TO EXPAND ›</Text>
-                </View>
-                {results.map((hero, i) => (
-                  <HeroDetailCard
-                    key={hero.id}
-                    hero={hero}
-                    index={i}
-                    onViewFull={handleViewFull}
-                  />
-                ))}
               </View>
             )}
           </View>
@@ -374,31 +353,6 @@ const styles = StyleSheet.create({
   },
 
   resultsSection: { backgroundColor: "#FFF9EE", paddingVertical: 16 },
-  resultsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  tapHint: {
-    fontFamily: "Oswald_700Bold",
-    fontSize: 9,
-    letterSpacing: 2,
-    color: "rgba(0,0,0,0.25)",
-    textTransform: "uppercase",
-    marginLeft: "auto",
-  },
-  labelLine: { width: 30, height: 3, backgroundColor: "#E8173D" },
-  sectionLabel: {
-    fontFamily: "Oswald_700Bold",
-    fontSize: 11,
-    letterSpacing: 4,
-    color: "#E8173D",
-    textTransform: "uppercase",
-  },
-
   loadingRow: { alignItems: "center", paddingVertical: 40, gap: 12 },
   loadingText: {
     fontFamily: "Bangers_400Regular",
