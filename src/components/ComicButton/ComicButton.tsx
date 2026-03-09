@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, View, Text, Animated } from 'react-native';
 
-const ComicButton: React.FC<{
-  label: string;
-  onPress: () => void;
-  bg?: string;
-  color?: string;
-  shadowColor?: string;
-  style?: object;
-}> = ({
+export default function ComicButton({
   label,
   onPress,
   bg = "#FFD600",
   color = "#1A1028",
   shadowColor = "#1A1028",
   style,
-}) => {
+}: {
+  label: string;
+  onPress: () => void;
+  bg?: string;
+  color?: string;
+  shadowColor?: string;
+  style?: object;
+}) {
   const [pressed, setPressed] = useState(false);
 
   return (
@@ -68,6 +68,4 @@ const ComicButton: React.FC<{
       </Animated.View>
     </TouchableOpacity>
   );
-};
-
-export default ComicButton;
+}

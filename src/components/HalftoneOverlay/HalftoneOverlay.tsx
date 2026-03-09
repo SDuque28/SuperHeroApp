@@ -2,13 +2,9 @@ import { View, StyleSheet, Dimensions } from "react-native";
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: number }> = ({
-  color = 'transparent',
-  dotColor = 'rgba(0,0,0,0.06)',
-  size = 8,
-}) => {
-  const cols = Math.ceil(SCREEN_W / size) + 2;
-  const rows = 18; 
+export default function HalftoneOverlay({ color = 'transparent', dotColor = 'rgba(0,0,0,0.06)', size = 8 }: 
+  { color?: string; dotColor?: string; size?: number }) 
+  { const cols = Math.ceil(SCREEN_W / size) + 2;const rows = 18; 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {Array.from({ length: rows }).map((_, r) => (
@@ -38,5 +34,3 @@ const HalftoneOverlay: React.FC<{ color?: string; dotColor?: string; size?: numb
     </View>
   );
 };
-
-export default HalftoneOverlay;
